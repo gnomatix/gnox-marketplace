@@ -1,0 +1,15 @@
+{
+  "name": "stalker",
+  "version": "0.1.0",
+  "description": "stalcaire: the watcher. Verifiable trust infrastructure for amnesiac agents — boot-challenge provenance verification (stalker), the reliquary storage layer (/mnt/doom: file-backed ZFS pool, read-only sealed contract dataset, ed25519-signed append-only lifecycle ledger), and provable unmaking (mount-doom). Deterministic core, stochastic shell; nothing asks to be believed, everything offers to be checked.",
+  "author": {
+    "name": "GNOX Risk Management Program"
+  },
+  "keywords": [
+    "trust",
+    "attestation",
+    "proof-of-destruction",
+    "lifecycle-ledger",
+    "audit"
+  ]
+}

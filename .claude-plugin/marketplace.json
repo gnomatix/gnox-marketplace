@@ -1,0 +1,45 @@
+{
+  "name": "gnox-marketplace",
+  "owner": {
+    "name": "GNOX Risk Management Program",
+    "email": "brettwhitty@gmail.com"
+  },
+  "metadata": {
+    "description": "Internal marketplace for GNOX governance and compliance tooling plugins.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "gnox-risk-management",
+      "source": "./plugins/gnox-risk-management",
+      "description": "Wizard-driven bootstrap and lifecycle management of controlled risk-management documentation sets (risk assessment, mitigation, reporting, implementation plans) for IT/IP risk scenarios — AI-tooling payload audit by default, print/physical-document egress included. Profile × scenario × stage modular; generic → proposed → approved → implemented lifecycle with incorporation of approved finals; pinned reference corpus fixing regulatory/SOP language against drift.",
+      "version": "0.6.1",
+      "author": {
+        "name": "GNOX Risk Management Program"
+      },
+      "keywords": [
+        "compliance",
+        "risk-management",
+        "audit",
+        "governance",
+        "payload-audit"
+      ]
+    },
+    {
+      "name": "stalker",
+      "source": "./plugins/stalker",
+      "description": "stalcaire: the watcher. Boot-challenge provenance verification, reliquary storage layer (/mnt/doom), ed25519 lifecycle ledger, and provable unmaking (mount-doom skill). Castle Aaargh was the filming name; Castle Stalker is the real one.",
+      "version": "0.1.0",
+      "author": {
+        "name": "GNOX Risk Management Program"
+      },
+      "keywords": [
+        "trust",
+        "attestation",
+        "proof-of-destruction",
+        "lifecycle-ledger",
+        "audit"
+      ]
+    }
+  ]
+}

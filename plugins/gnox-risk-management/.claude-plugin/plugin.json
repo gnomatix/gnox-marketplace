@@ -1,0 +1,17 @@
+{
+  "name": "gnox-risk-management",
+  "version": "0.6.1",
+  "description": "Wizard-driven bootstrap and lifecycle management of controlled risk-management documentation sets for risk scenarios in the IT/IP space. Three orthogonal modular axes: compliance profiles (default: us-regulated-default), risk scenarios (default: AI-tooling ingress/egress payload audit; also print/physical-document egress), and audience stages (risk-management, QA/QC, engineering, executive). Documents mature generic → proposed → approved → implemented; approved finals are incorporated back into the skill's working knowledge. Regulatory/SOP language is fixed against drift by a pinned, hashed reference corpus (RR-005 register): the model is never the source of a clause — verbatim quotes with verifiable citations or explicit corpus-gap placeholders, exact-match re-verified at audit. Vendor-portable: platform facts carry provenance tiers and expiry triggers rather than being baked into the procedure.",
+  "author": {
+    "name": "GNOX Risk Management Program",
+    "email": "brettwhitty@gmail.com"
+  },
+  "keywords": [
+    "compliance",
+    "risk-management",
+    "audit",
+    "HACCP",
+    "document-control",
+    "llm-gateway"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "regsource": {
+    "command": "node",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/servers/regsource/server.mjs"],
+    "env": {
+      "GOVINFO_API_KEY": "${GOVINFO_API_KEY}"
+    }
+  }
+}
