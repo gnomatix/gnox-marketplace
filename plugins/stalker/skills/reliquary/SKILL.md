@@ -21,6 +21,14 @@ Provide the storage substrate for `/mnt/doom`: the place where a contract, its a
 
 ## How to use
 
+### Preflight first (measure, never infer)
+
+```bash
+scripts/preflight.sh
+```
+
+Run this before saying any tool or privilege is missing. A `zpool` absent from PATH is not "no ZFS on this host": the kernel module, `/dev/zfs`, the userland package, the container's user namespace and pool-creation privilege are five separate facts, and the script measures each (it probes `zpool create` on a scratch file rather than reasoning about it). Its VERDICT lines say which runbook steps can run here and the exact remedy for each that cannot. Quote those lines; do not paraphrase them into a blocker.
+
 ### Provision (host-dependent — needs ZFS + privilege)
 
 ```bash

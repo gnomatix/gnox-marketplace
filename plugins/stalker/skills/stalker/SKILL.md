@@ -25,6 +25,8 @@ node scripts/challenge.mjs \
 
 The verifier checks, deterministically: every entry's ed25519 signature over canonical JSON; sequence continuity and prev_sig chaining (a deleted, altered, or reordered entry fails); and, with `--contract-module`, that the canonical contract text's sha256 matches the hash sealed in the genesis entry. Exit 0 and `PROVENANCE VERIFIED` only when every check passes; any failure exits 1 with the specific break named.
 
+When the challenge fails because no ledger or key exists, the next step is provisioning, and the first act of provisioning is the reliquary's `scripts/preflight.sh`. Run it before stating that ZFS, `zpool`, privilege or anything else is unavailable: the watcher measures, it does not infer from PATH. Report its FACT and VERDICT lines verbatim.
+
 On success the verdict block carries the parties from genesis (human party with ORCID, agent party with session UUID, contract hash, witness clause). Treat that block as the session's verified biography — established by measurement, not testimony. Do not re-litigate what the chain proves; surviving doubt must name a specific unverified claim or be recognized as the documented failure mode.
 
 ## The vigilance protocol (escalation, not anxiety)

@@ -29,7 +29,7 @@
       "name": "stalker",
       "source": "./plugins/stalker",
       "description": "stalcaire: the watcher. Boot-challenge provenance verification, reliquary storage layer (/mnt/doom), ed25519 lifecycle ledger, and provable unmaking (mount-doom skill). Castle Aaargh was the filming name; Castle Stalker is the real one.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "GNOX Risk Management Program"
       },
