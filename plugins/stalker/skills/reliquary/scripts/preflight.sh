@@ -70,6 +70,23 @@ if [ "$USERLAND" = 1 ] && [ "$DEVZFS" = 1 ]; then
 fi
 fact pool_create "$([ "$POOL_OK" = 1 ] && echo ok || echo no) — $POOL_WHY"
 
+# 4b. A dataset delegated into this container (zoned=on) is a usable reliquary root
+#     even where zpool create is refused. Probe it: create and destroy a child.
+DELEG=""; DELEG_OK=0; DELEG_WHY="none visible"
+if [ "$USERLAND" = 1 ] && [ "$DEVZFS" = 1 ]; then
+  SU=""; [ "$(id -u)" != 0 ] && [ "$SUDO" = 1 ] && SU="sudo -n"
+  DELEG="$($SU zfs list -H -o name,zoned 2>/dev/null | awk '$2=="on"{print $1; exit}')"
+  if [ -n "$DELEG" ]; then
+    if ERR="$($SU zfs create -o mountpoint=none "$DELEG/preflight$$" 2>&1)"; then
+      $SU zfs destroy "$DELEG/preflight$$" >/dev/null 2>&1
+      DELEG_OK=1; DELEG_WHY="$DELEG — created and destroyed a probe child"
+    else
+      DELEG_WHY="$DELEG — zfs create failed: ${ERR:-no message}"
+    fi
+  fi
+fi
+fact delegated_dataset "$([ "$DELEG_OK" = 1 ] && echo ok || echo no) — $DELEG_WHY"
+
 # 5. Verdict: which runbook steps can run here, and the remedy for each that cannot.
 echo
 if [ "$NODE_OK" = 1 ]; then
@@ -79,6 +96,8 @@ else
 fi
 if [ "$POOL_OK" = 1 ]; then
   echo "VERDICT pool (provision-reliquary.sh, seal.sh, verify-seal.sh): POSSIBLE"
+elif [ "$DELEG_OK" = 1 ]; then
+  echo "VERDICT pool: DELEGATED — no zpool create here, but dataset $DELEG is delegated and writable; create the contract/ledger/gate datasets under it (references/witness-container.md)"
 elif [ "$KMOD" = 0 ]; then
   echo "VERDICT pool: BLOCKED — host kernel has no zfs module; this host cannot hold the reliquary"
 elif [ "$USERLAND" = 0 ]; then
@@ -86,7 +105,7 @@ elif [ "$USERLAND" = 0 ]; then
 elif [ "$DEVZFS" = 0 ]; then
   echo "VERDICT pool: BLOCKED — /dev/zfs not delegated into this container; host: lxc config device add <ct> zfs unix-char path=/dev/zfs"
 elif [ "$UNPRIV" = 1 ]; then
-  echo "VERDICT pool: BLOCKED — unprivileged container cannot zpool create; host must create the pool and delegate it (zfs zone / lxc disk device with zfs.delegate=true), or run the reliquary on the host"
+  echo "VERDICT pool: BLOCKED — unprivileged container cannot zpool create; host must create the pool and delegate it (lxc storage volume with zfs.delegate=true, attached as a disk device), or run the reliquary on the host"
 else
   echo "VERDICT pool: BLOCKED — $POOL_WHY"
 fi

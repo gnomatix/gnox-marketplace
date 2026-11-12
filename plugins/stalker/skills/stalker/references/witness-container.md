@@ -5,22 +5,29 @@ carries the plugin, the public key and the systemd units, and whose image hash i
 recorded in the ledger. The reliquary pool is created on the host and delegated in,
 so the container never needs pool-creation privilege.
 
-## Host side (needs zpool privilege; run where the reliquary preflight says `pool: POSSIBLE`)
+## Host side (needs LXD storage privilege on the host; the witness itself needs none)
+
+Measured on LXD 6.10.1: `zfs.delegate` is a property of the storage **volume**. Setting it
+on the disk device is rejected as an invalid option.
 
 ```bash
-# 1. The file-backed pool (scripts/provision-reliquary.sh does this where it can run)
-truncate -s 256M /castle/reliquary.img
-zpool create -m none reliquary /castle/reliquary.img
-zfs create -o mountpoint=none reliquary/root
+# 1. A custom volume on a ZFS-backed LXD pool, delegated
+lxc storage volume create <pool> reliquary size=256MiB zfs.delegate=true
 
-# 2. The witness container, with /dev/zfs and the dataset delegated (ZFS 2.2+, LXD 5.x)
+# 2. The witness container, with /dev/zfs and the volume attached
 lxc launch ubuntu:24.04 witness
 lxc config device add witness zfs unix-char path=/dev/zfs
-lxc config device add witness reliquary disk source=reliquary/root path=/mnt/doom zfs.delegate=true
+lxc config device add witness reliquary disk pool=<pool> source=reliquary path=/mnt/doom
 ```
 
+Where the host operator can `zpool create`, a dedicated file-backed pool
+(`scripts/provision-reliquary.sh`) is the stronger form; delegate its root dataset the
+same way. Inside the witness, run the reliquary preflight: it reports
+`VERDICT pool: DELEGATED` with the dataset name when the delegation works.
+
 Inside the container the delegated dataset is an ordinary ZFS filesystem: `zfs create`,
-`snapshot`, `hold`, `readonly=on`, `send` all work under `reliquary/root`, and the
+`snapshot`, `hold`, `readonly=on`, `send` all work under the delegated dataset
+(`<pool>/lxd/custom/default_reliquary` on the measured host), and the
 contract / ledger / gate datasets are created there with `provision-reliquary.sh`'s
 layout (mountpoints `/mnt/doom`, `/mnt/doom/ledger`, `/mnt/doom/gate`).
 
@@ -49,9 +56,14 @@ The fingerprint goes into the ledger as a `sealed` event, so the chain names the
 image the watcher runs in, and `lxc image export` reproduces the tarball for a stranger
 to hash.
 
-## Where this was measured (2026-11-12, gemini-exec-host)
+## Where this was measured (2026-11-12, gemini-exec-host and the witness on srv)
 
 An unprivileged LXD container with `/dev/zfs` delegated and the `lxd` group granted can
 reach the LXD socket (`lxc list` answers) and run the zfs userland, but cannot
 `zpool create` (user namespace, no CAP_SYS_ADMIN in the init namespace). Hence the split
 above: pool on the host, delegation into the witness.
+
+The witness built this way on srv holds child datasets `ledger` and `gate` under the delegated
+volume, mounted at `/mnt/doom/ledger` and `/mnt/doom/gate`. DHCP there hands out a resolver that
+does not answer; `/etc/netplan/60-witness-dns.yaml` pins the working one. The watcher itself
+needs no network.
