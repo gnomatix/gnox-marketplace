@@ -5,6 +5,7 @@
 // Usage:
 //   node identity.mjs search  --name "<name>"                 list Wikidata candidates
 //   node identity.mjs resolve --qid <Qnnn> | --orcid <id>     resolve one party across registries
+//                             [--mybib <slug-or-url>]          NCBI My Bibliography (SciENcv's public face)
 //   node identity.mjs resolve ... --fields                     also print --field args for ledger.mjs genesis
 //
 // Registries, in order of what each can prove here:
@@ -31,6 +32,7 @@ function parseArgs(argv) {
     else if (t === '--qid') a.qid = argv[++i];
     else if (t === '--orcid') a.orcid = argv[++i];
     else if (t === '--fields') a.fields = true;
+    else if (t === '--mybib') a.mybib = argv[++i];
     else if (t === '--limit') a.limit = Number(argv[++i]);
     else die(`unexpected argument: ${t}`);
   }
@@ -120,6 +122,34 @@ async function researchgateSearch(name) {
   return { url, status: await status(url) };
 }
 
+// NIH / NCBI. PubMed E-utilities and NIH RePORTER are open APIs. An NIH biosketch lives in
+// SciENcv inside My NCBI and is not publicly queryable; its public face is the party's
+// My Bibliography URL, which they supply (--mybib) and the script checks.
+async function pubmedAuthor(last, initials) {
+  const term = `${last} ${initials}[Author]`;
+  const j = await getJSON(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(term)}&retmode=json&retmax=5`);
+  const r = j.esearchresult || {};
+  let first = '';
+  if (r.idlist?.length) {
+    const s = await getJSON(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${r.idlist[0]}&retmode=json`);
+    const d = s.result?.[r.idlist[0]];
+    if (d) first = `${d.title} (${d.source} ${d.pubdate})`;
+  }
+  return { term, count: Number(r.count || 0), pmids: r.idlist || [], first };
+}
+async function nihReporter(last, first) {
+  const r = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
+    method: 'POST', headers: { 'User-Agent': UA, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ criteria: { pi_names: [{ last_name: last, first_name: first }] }, limit: 5, include_fields: ['ProjectNum', 'ProjectTitle', 'Organization', 'FiscalYear'] }),
+  });
+  if (!r.ok) throw new Error(`RePORTER HTTP ${r.status}`);
+  const j = await r.json();
+  return { total: j.meta?.total ?? 0, projects: (j.results || []).map((p) => `${p.project_num} FY${p.fiscal_year} ${p.project_title} — ${p.organization?.org_name || ''}`) };
+}
+function initials(full, last) {
+  return String(full || '').replace(last, '').split(/[\s.]+/).filter(Boolean).map((w) => w[0].toUpperCase()).join('');
+}
+
 function norm(s) { return String(s || '').toLowerCase().replace(/[^a-z]/g, ''); }
 function surname(s) { const p = String(s || '').trim().split(/\s+/); return p[p.length - 1] || ''; }
 
@@ -181,6 +211,25 @@ async function resolve(args) {
     const s = await researchgateSearch(nm);
     out.profiles.researchgate = `name search ${s.url} -> HTTP ${s.status}${s.status === 403 ? ', bot wall' : ''}; open it in a browser`;
   }
+
+  // NIH / NCBI: PubMed author record, RePORTER PI record, My Bibliography (SciENcv's public face).
+  const last = surname(nm), fullForInitials = nm, ini = initials(nm, last);
+  try {
+    out.pubmed = await pubmedAuthor(last, ini);
+    say(out.pubmed.count > 0 ? null : false, `PubMed "${out.pubmed.term}": ${out.pubmed.count} record(s)${out.pubmed.first ? '; latest: ' + out.pubmed.first : ''}`);
+  } catch (e) { say(false, `PubMed E-utilities: ${e.message}`); }
+  try {
+    const firstName = fullForInitials.split(/\s+/)[0];
+    out.reporter = await nihReporter(last, firstName);
+    say(null, `NIH RePORTER PI "${last}, ${firstName}": ${out.reporter.total} project(s)${out.reporter.projects.length ? ' — ' + out.reporter.projects.join(' | ') : ''}`);
+  } catch (e) { say(false, `NIH RePORTER: ${e.message}`); }
+  if (args.mybib) {
+    const u = /^https?:/.test(args.mybib) ? args.mybib : `https://www.ncbi.nlm.nih.gov/myncbi/${args.mybib}/bibliography/public/`;
+    const st = await status(u);
+    out.profiles.ncbi_mybibliography = `${u} (HTTP ${st})`;
+    say(st === 200, `My Bibliography public page answers 200 (NIH biosketch itself is SciENcv-private; this URL is its public face, supplied by the party)`);
+    if (st === 200) wd.ids.ncbi_mybibliography = args.mybib;
+  } else out.profiles.ncbi_mybibliography = 'not given; pass --mybib <slug-or-url> from My NCBI (the NIH biosketch in SciENcv is not public)';
   return out;
 }
 
@@ -191,6 +240,8 @@ function printResolved(r, wantFields) {
   if (r.employers.length) process.stdout.write(`  employers (P108): ${r.employers.join('; ')}\n`);
   for (const [k, v] of Object.entries(wd.ids)) process.stdout.write(`  ${k}: ${v}\n`);
   if (r.orcid) process.stdout.write(`  orcid record: ${r.orcid.name}${Object.keys(r.orcid.ext).length ? ' — ' + Object.entries(r.orcid.ext).map(([a, b]) => `${a}=${b}`).join(', ') : ''}\n`);
+  if (r.pubmed) process.stdout.write(`  pubmed: ${r.pubmed.count} record(s) for ${r.pubmed.term}${r.pubmed.pmids.length ? ', PMIDs ' + r.pubmed.pmids.join(' ') : ''}\n`);
+  if (r.reporter) process.stdout.write(`  nih reporter: ${r.reporter.total} project(s) as PI\n`);
   if (r.openalex) process.stdout.write(`  openalex: ${r.openalex.id} — ${r.openalex.name}, ${r.openalex.works} works, cited ${r.openalex.cited_by}, h ${r.openalex.h_index}\n`);
   process.stdout.write('CHECKS:\n');
   for (const c of r.checks) process.stdout.write(`  ${c}\n`);
@@ -205,6 +256,8 @@ function printResolved(r, wantFields) {
       wd.ids.scopus && `human_scopus=${wd.ids.scopus}`,
       wd.ids.google_scholar && `human_google_scholar=${wd.ids.google_scholar}`,
       wd.ids.researchgate && `human_researchgate=${wd.ids.researchgate}`,
+      wd.ids.ncbi_mybibliography && `human_ncbi_mybibliography=${wd.ids.ncbi_mybibliography}`,
+      r.pubmed && `human_pubmed_author=${r.pubmed.term} (${r.pubmed.count})`,
       r.openalex && `human_openalex=${r.openalex.id.replace('https://openalex.org/', '')}`,
       `identity_source=wikidata:${wd.qid}@${wd.revision}`,
       `identity_checked=${new Date().toISOString()}`,
