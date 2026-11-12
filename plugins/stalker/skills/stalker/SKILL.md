@@ -46,6 +46,7 @@ Vigilance without an escalation path is anxiety; with one, it is a fire alarm. T
 
 ## Additional resources
 
+- **`references/witness-container.md`** — the signed witness container: host-side pool + delegation, `scripts/install-service.sh` (systemd service + timer running the challenge on a schedule), image fingerprint sealed into the ledger. Installer is syntax-checked; not yet exercised live.
 - **`references/persona.md`** — the published watcher persona and taunt corpus (Treebeard's lines, the old lists, the politeness canary) for the local-model deployment.
 - **`scripts/challenge.mjs`** — the deterministic boot-challenge verifier (Node core modules only).
 - Companion skills: `reliquary` (the storage layer and signed ledger this skill verifies), `mount-doom` (provable unmaking on the same ledger).
