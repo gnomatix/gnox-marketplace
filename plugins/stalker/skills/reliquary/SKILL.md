@@ -38,6 +38,17 @@ scripts/provision-reliquary.sh <pool> <vdev-img-path> <size> <mountpoint>
 
 Creates the file-backed pool and the contract/ledger/gate datasets. Requires `zfs`/`zpool` and pool-creation privilege — inside the witness container after the `lxd` group grant and `/dev/zfs` delegation. The script refuses to overwrite an existing vdev.
 
+### Identify the human party (works anywhere Node runs)
+
+Genesis names the human party. Look them up; do not type identifiers from memory.
+
+```bash
+node scripts/identity.mjs search  --name "<name>"            # Wikidata candidates (QID, label, description)
+node scripts/identity.mjs resolve --qid <Qnnn> --fields      # or --orcid <id>
+```
+
+`resolve` uses Wikidata as the hub (ORCID P496, Scopus P1153, Google Scholar P1960, ResearchGate P2038, OpenAlex P10283, employers P108), then corroborates through the ORCID public API (name, the external IDs the record holder lists) and OpenAlex (name, works, h-index). Google Scholar and ResearchGate take a plaintext name search (`view_op=search_authors`, `/search/researcher`), and the script runs both when Wikidata carries no profile ID, parsing Scholar's author list when a 200 arrives. Neither has an open API, and from a headless host Scholar typically answers 302 to a Google sign-in and ResearchGate 403; the script records exactly what came back and gives the URL to open in a browser. Scopus has an API that needs a key, so it appears as the profile URL with the HTTP status. A 302, 307 or 403 on any of these is a wall, not a negative. Each cross-check prints PASS/FAIL. The script never confirms: it ends with a CONFIRM block, and the human party affirms or rejects it before genesis. `--fields` prints the `--field` arguments for `genesis`, including `identity_source=wikidata:<QID>@<revision>` so the lookup is reproducible.
+
 ### Seed the ledger (works anywhere Node runs)
 
 The signed ledger is the deterministic core and has **no ZFS dependency** — it is fully usable today.

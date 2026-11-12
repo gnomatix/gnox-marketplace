@@ -17,7 +17,10 @@ if [ -z "$NODE_BIN" ] && [ -n "${SUDO_USER:-}" ]; then
   NODE_BIN="$(sudo -n -u "$SUDO_USER" -i bash -lc 'command -v node' 2>/dev/null || true)"
 fi
 if [ -n "$NODE_BIN" ]; then
-  NODE_OK=1; fact node "$("$NODE_BIN" --version) at $NODE_BIN"
+  NODE_OK=1
+  if command -v node >/dev/null 2>&1; then NODE_VER="$(node --version 2>/dev/null)"
+  else NODE_VER="$(sudo -n -u "$SUDO_USER" -i bash -lc 'node --version' 2>/dev/null)"; fi
+  fact node "${NODE_VER:-version unknown} at $NODE_BIN"
 else
   NODE_OK=0; fact node "absent"
 fi
